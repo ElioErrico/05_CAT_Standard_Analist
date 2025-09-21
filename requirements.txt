@@ -1,0 +1,3 @@
+pandas
+pymupdf
+unstructured[ocr]

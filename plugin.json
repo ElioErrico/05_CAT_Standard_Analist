@@ -1,0 +1,11 @@
+{
+    "name": "05_CAT_Standard_Analist",
+    "version": "1.9.0",
+    "description": "Questo plugin carica una normativa dopo averla strutturata in un dizionario e restituisce un foglio excel con il contenuto della norma",
+    "author_name": "Elio Errico",
+    "author_url": "https://github.com/ElioErrico",
+    "plugin_url": "https://github.com/ElioErrico/05_CAT_Standard_Analist",
+    "tags": "rabbit_hole, file_ingestion, standard, excel, normativa",
+    "thumb": "https://raw.githubusercontent.com/ElioErrico/04_CAT_Standard_Analist/main/Standard_Analist.png"
+  }
+  
