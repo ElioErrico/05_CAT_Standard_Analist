@@ -13,6 +13,7 @@ from .helpers import _clean_cid_and_control_chars, _extract_json_object
 from .helpers import normalize_rows_and_write_excel
 from .helpers import split_text_into_n_parts
 
+
 def _format_last_row_section(last_row: dict | None) -> str:
     """
     Restituisce la stringa da appendere al PROMPT_STD_ANALYSIS
@@ -32,6 +33,8 @@ def _format_last_row_section(last_row: dict | None) -> str:
 
 @hook  # default priority = 1
 def before_rabbithole_splits_text(docs, cat):
+    settings = cat.mad_hatter.get_plugin().load_settings()
+    tool_key = settings["tool_name"]    
     # ---- Guard: abilita/disabilita tool per utente; fallback=False ----
     try:
         with open("cat/static/tools_status.json", "r", encoding="utf-8") as f:
@@ -40,14 +43,21 @@ def before_rabbithole_splits_text(docs, cat):
         ts = {}
 
     uid = str(getattr(cat, "user_id", "") or "")
-    tool_key = "Analizzatore normative"
     enabled = bool(
         ts.get("tools", {})
           .get(tool_key, {})
           .get("user_id_tool_status", {})
           .get(uid, False)
     )
+    # cat.send_ws_message(
+    #     f"ℹ️ {tool_key} {'abilitato' if enabled else 'disabilitato'}.",
+    #     "chat"
+    # )
     if not enabled:
+        # cat.send_ws_message(
+        #     f"⚠️ {tool_key} disabilitato. Per abilitarlo usa il comando `/tools {tool_key}`.",
+        #     "chat"
+        # )
         return docs
 
 
@@ -68,7 +78,8 @@ def after_rabbithole_splitted_text(chunks, cat):
     - Scrive Excel formattato
     - Sostituisce i chunk con il JSON pretty corrispondente
     """
-    
+    settings = cat.mad_hatter.get_plugin().load_settings()
+    tool_key = settings["tool_name"]    
     # ---- Guard: abilita/disabilita tool per utente; fallback=False ----
     try:
         with open("cat/static/tools_status.json", "r", encoding="utf-8") as f:
@@ -77,14 +88,21 @@ def after_rabbithole_splitted_text(chunks, cat):
         ts = {}
 
     uid = str(getattr(cat, "user_id", "") or "")
-    tool_key = "standard_analysis_bot"
     enabled = bool(
         ts.get("tools", {})
           .get(tool_key, {})
           .get("user_id_tool_status", {})
           .get(uid, False)
     )
+    # cat.send_ws_message(
+    #     f"ℹ️ {tool_key} {'abilitato' if enabled else 'disabilitato'}.",
+    #     "chat"
+    # )
     if not enabled:
+    #     cat.send_ws_message(
+    #     f"ℹ️ {tool_key} {'abilitato' if enabled else 'disabilitato'}.",
+    #     "chat"
+    # )
         return chunks
 
     # --- Config colonne ---
@@ -104,6 +122,11 @@ def after_rabbithole_splitted_text(chunks, cat):
         "Compliant (YES/NO)",
     ]
     FINAL_COLUMNS = REQUIRED_KEYS + EXTRA_EMPTY_COLUMNS
+
+    # cat.send_ws_message(
+    #     f"ℹ️ {tool_key} {'abilitato' if enabled else 'disabilitato'}.",
+    #     "chat"
+    # )
 
     # --- Naming & path ---
     username = getattr(cat, "user_id", None) or "user"
@@ -169,7 +192,7 @@ def after_rabbithole_splitted_text(chunks, cat):
         # Log avanzamento
         start_idx, end_idx = i + 1, min(i + chunk_number, len(chunks))
         cat.send_ws_message(
-            f"📥 Elaborati chunks {start_idx}-{end_idx} di {len(chunks)}. Righe uniche finora: {len(all_rows)}.",
+            f"📥 Elaborati {start_idx}-{end_idx} di {len(chunks)}. Righe finora: {len(all_rows)}.",
             "chat"
         )
 
