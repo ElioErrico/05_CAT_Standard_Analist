@@ -3,7 +3,7 @@ from cat.mad_hatter.decorators import plugin
 from typing import Any, Dict
 import os
 import json
-
+import inspect, json
 
 def _compute_path() -> str:
     root_dir = os.environ.get("CCAT_ROOT", os.getcwd())
@@ -65,17 +65,25 @@ def save_settings(settings: Any) -> Dict[str, Any]:
     if not existed or not isinstance(data["tools"].get(tool_name), dict):
         data["tools"][tool_name] = {}
 
-    try:
-        _save_json(path, data)
-    except Exception as e:
-        return {"status": "error", "message": f"Errore salvataggio: {e}"}
+    _save_json(path, data)
 
-    return {
-        "status": "success",
-        "message": "Tool registrato correttamente",
-        "data": {
-            "tool_name": tool_name,
-            "created": not existed,
-            "file": path,
-        },
-    }
+    """
+    Salva i settings nel file settings.json
+    """
+    current_file = inspect.getfile(inspect.currentframe())
+    plugin_dir = os.path.dirname(os.path.abspath(current_file))
+    settings_file_path = os.path.join(plugin_dir, "settings.json")
+    
+    # Carica vecchi settings e unisci con i nuovi
+    old_settings = {}
+    if os.path.isfile(settings_file_path):
+        with open(settings_file_path, "r") as f:
+            old_settings = json.load(f)
+    
+    updated_settings = {**old_settings, **settings}
+    
+    # Salva
+    with open(settings_file_path, "w") as f:
+        json.dump(updated_settings, f, indent=4)
+    
+    return updated_settings
