@@ -14,27 +14,24 @@ from .helpers import normalize_rows_and_write_excel
 from .helpers import split_text_into_n_parts
 
 
-def _format_last_row_section(last_row: dict | None) -> str:
+def _format_last_rows_section(last_rows: list[dict] | None, max_rows: int = 4) -> str:
     """
-    Restituisce la stringa da appendere al PROMPT_STD_ANALYSIS
-    con l'ultima riga generata, se presente.
-    Il template del prompt già contiene:
-      ## Ultima riga generata:
-      L'ultima riga che hai inserito è:
-    quindi qui aggiungiamo solo il JSON della riga.
+    Restituisce le ultime N righe in formato JSON da appendere al prompt.
     """
-    if not last_row:
+    if not last_rows:
         return ""
     try:
-        return "\n" + json.dumps(last_row, ensure_ascii=False) + "\n"
+        subset = last_rows[-max_rows:] if max_rows > 0 else []
+        return "\n" + json.dumps(subset, ensure_ascii=False) + "\n"
     except Exception:
-        return "\n" + str(last_row) + "\n"
+        return "\n" + str(last_rows[-max_rows:] if max_rows > 0 else []) + "\n"
 
 
 @hook  # default priority = 1
 def before_rabbithole_splits_text(docs, cat):
     settings = cat.mad_hatter.get_plugin().load_settings()
     tool_key = settings["tool_name"]    
+    max_rows_for_prompt = int(settings.get("prompt_last_rows_count", 4))
     # ---- Guard: abilita/disabilita tool per utente; fallback=False ----
     try:
         with open("cat/static/tools_status.json", "r", encoding="utf-8") as f:
@@ -141,7 +138,8 @@ def after_rabbithole_splitted_text(chunks, cat):
     seen_keys = set()  # dedup su (No., Description, References)
 
     # Memoria locale dell'ultima riga accettata (per il prompt del gruppo successivo)
-    last_row_for_prompt: dict | None = None
+    recent_rows_for_prompt: list[dict] = []
+    max_rows_for_prompt = int(settings.get("prompt_last_rows_count", 4))
 
     # Gruppi non sovrapposti da 3
     chunk_number = 3
@@ -151,7 +149,7 @@ def after_rabbithole_splitted_text(chunks, cat):
         concatenated_content = "\n".join([c.page_content for c in group])
 
         # Prompt dinamico: aggiunge l'ultima riga generata (se esiste)
-        dynamic_prompt = PROMPT_STD_ANALYSIS + _format_last_row_section(last_row_for_prompt)
+        dynamic_prompt = PROMPT_STD_ANALYSIS + _format_last_rows_section(recent_rows_for_prompt, max_rows_for_prompt)
 
         # Puoi lasciare cat.llm o passare a cat.run come da discussione precedente
         response = cat.llm(dynamic_prompt + concatenated_content)
@@ -180,8 +178,8 @@ def after_rabbithole_splitted_text(chunks, cat):
                 continue
             seen_keys.add(key)
             all_rows.append(r)
-            # aggiorna l'ultima riga accettata: sarà usata nel prompt del prossimo gruppo
-            last_row_for_prompt = r
+            recent_rows_for_prompt.append(r)
+            recent_rows_for_prompt = recent_rows_for_prompt[-max_rows_for_prompt:]
 
         # Sostituisci i chunk del gruppo con JSON pretty della risposta (una sola volta)
         pretty_json = json.dumps({"rows": group_rows}, ensure_ascii=False, indent=2)

@@ -68,7 +68,7 @@ Restituisci solo un oggetto JSON conforme al seguente schema (nessun testo extra
     }
   ]
 
-## Ultima riga generata:
-L'ultima riga che hai inserito è: 
+## Ultime righe generate:
+Le ultime righe che hai inserito sono: 
 
 }"""
